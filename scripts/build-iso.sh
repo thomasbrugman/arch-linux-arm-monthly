@@ -36,13 +36,16 @@ Server = https://pkg.archboot.com
 CONF
 pacman -Syu --noconfirm
 pacman -S --noconfirm --needed archboot-arm
-mkdir -p /build && cd /build
-archboot-aarch64-iso.sh -g
-find /build / -xdev -name '*.iso' -newer /build.sh 2>/dev/null | sort -u
+# Archboot builds the ISO inside a container filled with current ALARM packages
+archboot-aarch64-create-container.sh /container
+for m in dev proc sys; do mkdir -p /container/\$m; done
+mount --bind /dev /container/dev; mount -t proc proc /container/proc; mount -t sysfs sys /container/sys
+chroot /container /bin/bash -c 'cd /root && archboot-aarch64-iso.sh -g && ls -l /root/*.iso /*.iso 2>/dev/null; find / -xdev -name "*.iso" 2>/dev/null'
+umount /container/dev /container/proc /container/sys || true
 INNER
 chroot "$ROOT" /bin/bash /build.sh 2>&1 | tee "$OUT/build.log"
 
-ISOS=$(find "$ROOT" -xdev -name '*.iso' -newer "$ROOT/build.sh" -not -path "$ROOT/proc/*" | sort -u)
+ISOS=$(find "$ROOT/container" -xdev -name '*.iso' -not -path '*/proc/*' | sort -u)
 [ -n "$ISOS" ] || { echo "no ISO produced"; exit 1; }
 for f in $ISOS; do cp "$f" "$OUT/"; done
 cd "$OUT"; sha256sum *.iso > SHA256SUMS; ls -lh

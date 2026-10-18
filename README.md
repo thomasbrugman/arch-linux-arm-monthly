@@ -8,8 +8,8 @@ The workflow `.github/workflows/iso.yml` runs `scripts/build-iso.sh` on GitHub's
 
 1. Downloads the official Arch Linux ARM generic aarch64 tarball and checks its md5 against the mirror.
 2. Unpacks it into a chroot, populates the Arch Linux ARM keyring and runs `pacman -Syu`.
-3. Adds the [Archboot](https://archboot.com/) package repository (its signing key is pinned by fingerprint `5B7E3FB71B7F10329A1C03AB771DF6627EDF681F`) and installs `archboot-arm`.
-4. Runs `archboot-aarch64-iso.sh`, which assembles the ISO.
+3. Adds the [Archboot](https://archboot.com/) package repository (its signing key is pinned by fingerprint `5B7E3FB71B7F10329A1C03AB771DF6627EDF681F`) and installs `archboot-arm`, then runs `archboot-aarch64-create-container.sh` to fill a build container with current Arch Linux ARM packages.
+4. Runs `archboot-aarch64-iso.sh` inside that container, which assembles the ISO.
 
 What is built here and what is reused: the ISO is assembled on each run from current Arch Linux ARM packages. The ISO tooling (the `archboot-arm` package and its scripts) is Archboot's work by Tobias Powalowski; this repo does not change it. The Arch Linux ARM tarball is only the build environment.
 
