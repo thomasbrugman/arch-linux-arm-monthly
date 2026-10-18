@@ -82,6 +82,9 @@ chmod +x /usr/local/bin/systemd-nspawn
 # Archboot builds the ISO inside a container filled with current ALARM packages
 retry archboot-aarch64-create-container.sh /container
 sed -i "s#^_NO_LOG=.*#_NO_LOG=/var/tmp/nolog.txt#" /container/usr/lib/archboot/common.sh
+# an empty compressed-file list (e.g. uncompressed firmware dir) makes bsdtar report a truncated archive; tolerate it
+sed -i "s#--format=newc @- >> \"\\\${2}\" .. _abort \"Image creation failed!\"#--format=newc @- >> \"\\\${2}\" || true#" /container/usr/lib/archboot/common.sh
+grep -n "newc @- >>" /container/usr/lib/archboot/common.sh
 for m in dev proc sys; do mkdir -p /container/\$m; done
 mount --bind /dev /container/dev; mount -t proc proc /container/proc; mount -t sysfs sys /container/sys
 chroot /container /bin/bash -c 'cd /root && bash -x /usr/bin/archboot-aarch64-iso.sh -g; echo ISO-SCRIPT-EXIT=\$?; ls -l /root/*.iso /*.iso 2>/dev/null; find / -xdev -name "*.iso" 2>/dev/null'
