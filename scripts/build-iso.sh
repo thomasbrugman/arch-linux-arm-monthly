@@ -53,8 +53,7 @@ CONF
 retry pacman -Syu --noconfirm
 retry pacman -S --noconfirm --needed archboot-arm
 pacman -Scc --noconfirm; df -h /
-sed -i "s#^_NO_LOG=.*#_NO_LOG=/dev/stdout#" /usr/lib/archboot/common.sh
-sed -i "2i set -x" /usr/bin/archboot-cpio.sh
+sed -i "s#^_NO_LOG=.*#_NO_LOG=/var/tmp/nolog.txt#" /usr/lib/archboot/common.sh
 # systemd-nspawn cannot run inside our chroot (no systemd, no machine-id), so give Archboot a chroot-based stand-in
 cat > /usr/local/bin/systemd-nspawn <<'SHIM'
 #!/bin/bash
@@ -85,6 +84,7 @@ retry archboot-aarch64-create-container.sh /container
 for m in dev proc sys; do mkdir -p /container/\$m; done
 mount --bind /dev /container/dev; mount -t proc proc /container/proc; mount -t sysfs sys /container/sys
 chroot /container /bin/bash -c 'cd /root && bash -x /usr/bin/archboot-aarch64-iso.sh -g; echo ISO-SCRIPT-EXIT=\$?; ls -l /root/*.iso /*.iso 2>/dev/null; find / -xdev -name "*.iso" 2>/dev/null'
+echo "=== nolog tail ==="; tail -n 40 /container/var/tmp/nolog.txt; echo "=== end ==="
 umount /container/dev /container/proc /container/sys || true
 INNER
 chroot "$ROOT" /bin/bash /build.sh 2>&1 | tee "$OUT/build.log"
