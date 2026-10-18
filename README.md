@@ -19,7 +19,7 @@ Changed, in `scripts/adapt-profile.sh` (the build log prints the result):
 - Repositories: Arch Linux ARM (`core`, `extra`, `alarm`) instead of Arch Linux, and the live system's keyring is `archlinuxarm`.
 - Packages: releng's aarch64 list minus anything Arch Linux ARM does not carry (the build log lists them), with `linux-aarch64` as the kernel.
 - Kernel glue: Arch Linux ARM's kernel package ships `/boot/Image` rather than the layout Arch's kernels use, so a small `customize_airootfs.sh` renames it to `vmlinuz-linux` and builds the initramfs.
-- Boot modes: UEFI only, and the x86-only memtest entry is removed.
+- Boot modes: UEFI only, the x86-only memtest entry is removed, and the `memdisk` initramfs hook (syslinux BIOS only) is dropped.
 
 ## Using the ISO
 

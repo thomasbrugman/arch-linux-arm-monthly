@@ -45,6 +45,10 @@ sed -i 's#/usr/bin/pacman-key --populate$#/usr/bin/pacman-key --populate archlin
 sed -i "s/^bootmodes=.*/bootmodes=('uefi.systemd-boot')/; /^           'uefi.systemd-boot')$/d" "$P/profiledef.sh"
 rm -f "$P"/efiboot/loader/entries/*memtest* "$P"/efiboot/loader/entries/*speech* || true
 
+# 4b. the memdisk initramfs hook only serves syslinux's x86 BIOS memdisk boot; its phram module and memdiskfind binary
+#     do not exist on aarch64, and the build errors without removing it
+sed -i 's/ memdisk / /' "$P/airootfs/etc/mkinitcpio.conf.d/archiso.conf"
+
 # 5. Arch Linux ARM's kernel package ships /boot/Image and the preset linux-aarch64 instead of
 #    /boot/vmlinuz-linux and a pkgbase file; give mkarchiso the names it expects.
 cat > "$P/airootfs/root/customize_airootfs.sh" <<'CUSTOM'
