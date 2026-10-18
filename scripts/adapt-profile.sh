@@ -43,7 +43,7 @@ sed -i 's#/usr/bin/pacman-key --populate$#/usr/bin/pacman-key --populate archlin
 
 # 4. only UEFI (releng's aarch64 mode); drop memtest entry that is x86 only
 sed -i "s/^bootmodes=.*/bootmodes=('uefi.systemd-boot')/; /^           'uefi.systemd-boot')$/d" "$P/profiledef.sh"
-rm -f "$P"/efiboot/loader/entries/*memtest* "$P"/efiboot/loader/entries/*speech* || true
+rm -f "$P"/efiboot/loader/entries/*memtest*
 
 # 4b. the memdisk initramfs hook only serves syslinux's x86 BIOS memdisk boot; its phram module and memdiskfind binary
 #     do not exist on aarch64, and the build errors without removing it
