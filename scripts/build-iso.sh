@@ -54,6 +54,7 @@ retry pacman -Syu --noconfirm
 retry pacman -S --noconfirm --needed archboot-arm
 pacman -Scc --noconfirm; df -h /
 sed -i "s#^_NO_LOG=.*#_NO_LOG=/dev/stdout#" /usr/lib/archboot/common.sh
+sed -i "2i set -x" /usr/bin/archboot-cpio.sh
 # systemd-nspawn cannot run inside our chroot (no systemd, no machine-id), so give Archboot a chroot-based stand-in
 cat > /usr/local/bin/systemd-nspawn <<'SHIM'
 #!/bin/bash
