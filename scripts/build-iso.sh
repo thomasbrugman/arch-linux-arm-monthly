@@ -8,6 +8,9 @@ set -euo pipefail
 ROOT=${ROOT:-/alarm}; OUT=${OUT:-$PWD/out}; MIRROR=${MIRROR:-http://os.archlinuxarm.org/os}
 ARCHBOOT_FPR=5B7E3FB71B7F10329A1C03AB771DF6627EDF681F
 mkdir -p "$OUT" "$ROOT"
+# free space on the runner image; the build needs several GB
+rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache /usr/local/share/boost /usr/local/julia* 2>/dev/null || true
+df -h / | tee -a "$OUT/build.log"
 apt-get update -qq
 DEBIAN_FRONTEND=noninteractive apt-get install -y -qq libarchive-tools curl ca-certificates
 curl -fL --retry 5 -o /tmp/base.tar.gz "$MIRROR/ArchLinuxARM-aarch64-latest.tar.gz"
@@ -19,7 +22,7 @@ rm /tmp/base.tar.gz
 mount --bind "$ROOT" "$ROOT"
 mount --bind /dev "$ROOT/dev"; mount -t devpts devpts "$ROOT/dev/pts" || true
 mount -t proc proc "$ROOT/proc"; mount -t sysfs sys "$ROOT/sys"; mount -t tmpfs tmpfs "$ROOT/tmp"
-cleanup(){ set +e; umount -R "$ROOT" 2>/dev/null; }
+cleanup(){ set +e; df -h / | tee -a "$OUT/build.log"; du -sh "$ROOT" "$ROOT/container" 2>/dev/null | tee -a "$OUT/build.log"; umount -R "$ROOT" 2>/dev/null; }
 trap cleanup EXIT
 mv "$ROOT/etc/resolv.conf" "$ROOT/etc/resolv.conf.orig"; cp /etc/resolv.conf "$ROOT/etc/resolv.conf"
 
@@ -49,6 +52,7 @@ Server = https://pkg.archboot.net
 CONF
 retry pacman -Syu --noconfirm
 retry pacman -S --noconfirm --needed archboot-arm
+pacman -Scc --noconfirm; df -h /
 # Archboot builds the ISO inside a container filled with current ALARM packages
 retry archboot-aarch64-create-container.sh /container
 for m in dev proc sys; do mkdir -p /container/\$m; done
