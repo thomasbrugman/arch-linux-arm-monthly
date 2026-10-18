@@ -25,19 +25,32 @@ mv "$ROOT/etc/resolv.conf" "$ROOT/etc/resolv.conf.orig"; cp /etc/resolv.conf "$R
 
 cat > "$ROOT/build.sh" <<INNER
 set -euxo pipefail
+retry() { for i in 1 2 3 4; do "\$@" && return 0; echo "retry \$i of: \$*"; sleep \$((i*20)); done; return 1; }
+cat > /etc/pacman.d/mirrorlist <<'MIRRORS'
+Server = http://fl.us.mirror.archlinuxarm.org/\$arch/\$repo
+Server = http://nj.us.mirror.archlinuxarm.org/\$arch/\$repo
+Server = http://ca.us.mirror.archlinuxarm.org/\$arch/\$repo
+Server = http://de.mirror.archlinuxarm.org/\$arch/\$repo
+Server = http://de4.mirror.archlinuxarm.org/\$arch/\$repo
+Server = http://dk.mirror.archlinuxarm.org/\$arch/\$repo
+Server = http://mirror.archlinuxarm.org/\$arch/\$repo
+MIRRORS
+sed -i -E '/^\[options\]/a DisableDownloadTimeout\nParallelDownloads = 3' /etc/pacman.conf
 pacman-key --init
 pacman-key --populate archlinuxarm
-pacman-key --keyserver hkps://keyserver.ubuntu.com --recv-keys $ARCHBOOT_FPR
+retry pacman-key --keyserver hkps://keyserver.ubuntu.com --recv-keys $ARCHBOOT_FPR
 pacman-key --lsign-key $ARCHBOOT_FPR
 cat >> /etc/pacman.conf <<'CONF'
 
 [archboot]
 Server = https://pkg.archboot.com
+Server = https://pkg.archboot.eu
+Server = https://pkg.archboot.net
 CONF
-pacman -Syu --noconfirm
-pacman -S --noconfirm --needed archboot-arm
+retry pacman -Syu --noconfirm
+retry pacman -S --noconfirm --needed archboot-arm
 # Archboot builds the ISO inside a container filled with current ALARM packages
-archboot-aarch64-create-container.sh /container
+retry archboot-aarch64-create-container.sh /container
 for m in dev proc sys; do mkdir -p /container/\$m; done
 mount --bind /dev /container/dev; mount -t proc proc /container/proc; mount -t sysfs sys /container/sys
 chroot /container /bin/bash -c 'cd /root && archboot-aarch64-iso.sh -g && ls -l /root/*.iso /*.iso 2>/dev/null; find / -xdev -name "*.iso" 2>/dev/null'

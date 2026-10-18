@@ -21,7 +21,7 @@ jobs:
       - name: Show build log tail on failure
         if: failure()
         run: |
-          tail -n 40 out/build.log 2>/dev/null | while IFS= read -r l; do
+          { tr '\r' '\n' < out/build.log | grep -a -i -E 'error|fail|timed out|timeout|retry|not found' | tail -n 20; echo ---; tr '\r' '\n' < out/build.log | tail -n 10; } 2>/dev/null | while IFS= read -r l; do
             l=${l//'%'/%25}; l=${l//$'\r'/}; echo "::error::${l:0:400}"
           done
 
