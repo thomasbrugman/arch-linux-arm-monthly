@@ -54,6 +54,31 @@ retry pacman -Syu --noconfirm
 retry pacman -S --noconfirm --needed archboot-arm
 pacman -Scc --noconfirm; df -h /
 sed -i "s#^_NO_LOG=.*#_NO_LOG=/dev/stdout#" /usr/lib/archboot/common.sh
+# systemd-nspawn cannot run inside our chroot (no systemd, no machine-id), so give Archboot a chroot-based stand-in
+cat > /usr/local/bin/systemd-nspawn <<'SHIM'
+#!/bin/bash
+BINDS=(); DIR=""
+while [ \$# -gt 0 ]; do
+  case "\$1" in
+    -q) shift;; --bind) BINDS+=("\$2"); shift 2;; -D) DIR="\$2"; shift 2;; *) break;;
+  esac
+done
+MOUNTED=()
+for m in proc sys dev; do
+  mkdir -p "\$DIR/\$m"
+  if ! mountpoint -q "\$DIR/\$m"; then
+    case \$m in proc) mount -t proc proc "\$DIR/proc";; sys) mount -t sysfs sys "\$DIR/sys";; dev) mount --bind /dev "\$DIR/dev";; esac
+    MOUNTED+=("\$m")
+  fi
+done
+for b in "\${BINDS[@]}"; do mkdir -p "\$DIR\$b"; mount --bind "\$b" "\$DIR\$b"; done
+[ -s "\$DIR/etc/resolv.conf" ] || cp -L /etc/resolv.conf "\$DIR/etc/resolv.conf" 2>/dev/null
+chroot "\$DIR" "\$@"; rc=\$?
+for b in "\${BINDS[@]}"; do umount "\$DIR\$b" 2>/dev/null; done
+for m in "\${MOUNTED[@]}"; do umount -l "\$DIR/\$m" 2>/dev/null; done
+exit \$rc
+SHIM
+chmod +x /usr/local/bin/systemd-nspawn
 # Archboot builds the ISO inside a container filled with current ALARM packages
 retry archboot-aarch64-create-container.sh /container
 for m in dev proc sys; do mkdir -p /container/\$m; done
