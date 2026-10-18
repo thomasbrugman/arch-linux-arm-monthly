@@ -21,7 +21,7 @@ jobs:
       - name: Show build log tail on failure
         if: failure()
         run: |
-          { tr '\r' '\n' < out/build.log | grep -a -v '^+' | grep -a -E 'space|Filesystem|/dev/|alarm|retry|error:|Error' | tail -n 30; echo ---; tr '\r' '\n' < out/build.log | grep -a -v '^+' | tail -n 12; } 2>/dev/null | while IFS= read -r l; do
+          { tr '\r' '\n' < out/build.log | grep -a -v '^+' | grep -a -E 'space|Filesystem|/dev/|alarm|retry|error:|Error' | tail -n 30; echo ---; tr '\r' '\n' < out/build.log | grep -a -v '^+' | tail -n 12; echo ---; tr '\r' '\n' < out/build.log | grep -a -v -E '^\+|downloading|\.\.\. *$' | tail -n 40; } 2>/dev/null | while IFS= read -r l; do
             l=${l//'%'/%25}; l=${l//$'\r'/}; echo "::error::${l:0:400}"
           done
 

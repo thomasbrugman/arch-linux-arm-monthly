@@ -53,6 +53,7 @@ CONF
 retry pacman -Syu --noconfirm
 retry pacman -S --noconfirm --needed archboot-arm
 pacman -Scc --noconfirm; df -h /
+sed -i "s#^_NO_LOG=.*#_NO_LOG=/dev/stdout#" /usr/lib/archboot/common.sh
 # Archboot builds the ISO inside a container filled with current ALARM packages
 retry archboot-aarch64-create-container.sh /container
 for m in dev proc sys; do mkdir -p /container/\$m; done
