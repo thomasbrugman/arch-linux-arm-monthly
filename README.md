@@ -1,20 +1,28 @@
 # arch-linux-arm-monthly
 
-An installer ISO for Arch Linux ARM (aarch64, UEFI), built from source on the 1st of every month and published as a GitHub release (tag `iso-YYYY.MM.DD`). Arch Linux ARM does not publish an ISO of its own.
+A live and installer ISO for Arch Linux ARM (aarch64, UEFI) that works like the official x86_64 Arch ISO. It is built on the 1st of every month and published as a GitHub release (tag `iso-YYYY.MM.DD`). Arch Linux ARM does not publish an ISO of its own.
 
 ## How it is built
 
-The workflow `.github/workflows/iso.yml` runs `scripts/build-iso.sh` on GitHub's free `ubuntu-24.04-arm` runner at 03:00 UTC on the 1st (and on manual start). The script:
+`.github/workflows/iso.yml` runs on GitHub's free `ubuntu-24.04-arm` runner at 03:00 UTC on the 1st (and on manual start):
 
-1. Downloads the official Arch Linux ARM generic aarch64 tarball and checks its md5 against the mirror.
-2. Unpacks it into a chroot, populates the Arch Linux ARM keyring and runs `pacman -Syu`.
-3. Adds the [Archboot](https://archboot.com/) package repository (its signing key is pinned by fingerprint `5B7E3FB71B7F10329A1C03AB771DF6627EDF681F`) and installs `archboot-arm`, then runs `archboot-aarch64-create-container.sh` to fill a build container with current Arch Linux ARM packages.
-4. Runs `archboot-aarch64-iso.sh` inside that container, which assembles the ISO.
+1. `scripts/build-iso.sh` downloads the official Arch Linux ARM aarch64 tarball, checks its md5 and imports it as a Docker image.
+2. `scripts/in-container.sh` runs in that image: it updates it, checks out [archiso](https://gitlab.archlinux.org/archlinux/archiso) at a pinned commit (v91, the same tool that builds the official x86_64 ISO) and runs `mkarchiso` on archiso's own `releng` profile.
+3. `scripts/boot-test.sh` boots the resulting ISO in QEMU (aarch64, UEFI firmware) and only lets the release through if the live system reaches its login prompt.
 
-What is built here and what is reused: the ISO is assembled on each run from current Arch Linux ARM packages. The ISO tooling (the `archboot-arm` package and its scripts) is Archboot's work by Tobias Powalowski; this repo does not change it. The Arch Linux ARM tarball is only the build environment.
+## What is upstream and what is changed
+
+Reused unchanged: archiso and the `releng` profile (boot menu via systemd-boot, the live environment, `archinstall`, the same package list). Packages come from the Arch Linux ARM repositories.
+
+Changed, in `scripts/adapt-profile.sh` (the build log prints the result):
+
+- Repositories: Arch Linux ARM (`core`, `extra`, `alarm`) instead of Arch Linux, and the live system's keyring is `archlinuxarm`.
+- Packages: releng's aarch64 list minus anything Arch Linux ARM does not carry (the build log lists them), with `linux-aarch64` as the kernel.
+- Kernel glue: Arch Linux ARM's kernel package ships `/boot/Image` rather than the layout Arch's kernels use, so a small `customize_airootfs.sh` renames it to `vmlinuz-linux` and builds the initramfs.
+- Boot modes: UEFI only, and the x86-only memtest entry is removed.
 
 ## Using the ISO
 
-Boot it with UEFI and follow the Archboot setup menu. Archboot lists UTM, Parallels Desktop and VMware as supported VM hosts on Apple Silicon. It states that UTM's Apple Virtualization backend does not work with the aarch64 kernel, so use UTM's QEMU backend.
+Boot it with UEFI. In UTM use the QEMU backend with UEFI, not Apple Virtualization. Then follow the usual Arch install guide or run `archinstall`.
 
-Not affiliated with Arch Linux ARM or Archboot.
+Not affiliated with Arch Linux or Arch Linux ARM.

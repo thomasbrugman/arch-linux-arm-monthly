@@ -2,6 +2,11 @@ name: Build Arch Linux ARM installer ISO
 
 on:
   workflow_dispatch:
+    inputs:
+      publish:
+        description: 'Publish a release after a successful boot test'
+        type: boolean
+        default: false
   schedule:
     - cron: '0 3 1 * *'   # 03:00 UTC on the 1st of each month
 
@@ -11,30 +16,34 @@ permissions:
 jobs:
   iso:
     runs-on: ubuntu-24.04-arm
-    timeout-minutes: 120
+    timeout-minutes: 180
     steps:
       - uses: actions/checkout@v4
 
-      - name: Build ISO
-        run: sudo ./scripts/build-iso.sh
+      - name: Build ISO (upstream archiso, Arch Linux ARM packages)
+        run: ./scripts/build-iso.sh
 
-      - name: Show build log tail on failure
-        if: failure()
-        run: |
-          T=$(tr '\r' '\n' < out/build.log | grep -a -v -E '^\+|downloading|\.\.\. *$|^ *$' | tail -n 60 | cut -c1-300)
-          T=${T//'%'/%25}; T=${T//$'\n'/%0A}
-          echo "::error title=build tail::${T}"
-          X=$(tr '\r' '\n' < out/build.log | grep -a -v -E 'downloading|^ *$' | tail -n 90 | cut -c1-260)
-          X=${X//'%'/%25}; X=${X//$'\n'/%0A}
-          echo "::error title=raw tail::${X}"
+      - name: Boot test in QEMU (aarch64, UEFI)
+        run: ./scripts/boot-test.sh
+
+      - name: Upload build log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: logs
+          path: |
+            out/build.log
+            /tmp/serial.log
+          if-no-files-found: ignore
 
       - name: Publish release
+        if: github.event_name == 'schedule' || inputs.publish
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           D=$(date -u +%Y.%m.%d); TAG="iso-$D"
           cat > notes.md <<NOTES
-          Arch Linux ARM aarch64 installer ISO, built $D from source with Archboot's tooling on an Arch Linux ARM system, using current Arch Linux ARM packages.
-          Boots with UEFI on aarch64 (UTM with the QEMU backend, Parallels, VMware, ARM hardware with UEFI). Checksums are in SHA256SUMS.
+          Arch Linux ARM aarch64 live/installer ISO, built $D with upstream archiso (releng profile) from current Arch Linux ARM packages.
+          UEFI only. It booted to the live login prompt in QEMU (aarch64, UEFI firmware) before this release was published. Checksums are in SHA256SUMS.
           NOTES
-          gh release create "$TAG" out/*.iso out/SHA256SUMS --title "Arch Linux ARM installer ISO $D" --notes-file notes.md
+          gh release create "$TAG" out/*.iso out/SHA256SUMS --title "Arch Linux ARM ISO $D" --notes-file notes.md
