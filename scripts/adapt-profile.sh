@@ -27,6 +27,7 @@ CONF
 # 2. package list: keep releng's list, but only what Arch Linux ARM carries; the kernel is linux-aarch64
 pacman -Sy >/dev/null
 : > /tmp/dropped.txt
+: > /tmp/kept.txt
 grep -v '^#' "$P/packages.aarch64" | grep -v '^$' | sort -u | while read -r pkg; do
   [ "$pkg" = linux ] && continue
   if pacman -Si "$pkg" >/dev/null 2>&1; then echo "$pkg" >> /tmp/kept.txt; else echo "$pkg" >> /tmp/dropped.txt; fi
@@ -38,8 +39,28 @@ cat "$P/bootstrap_packages" | head -0
 # bootstrap tarball is not built here; keep file consistent
 sed -i '/^archlinux-keyring$/d' "$P/bootstrap_packages" 2>/dev/null || true
 
-# 3. keyring in the live system: Arch Linux ARM's
-sed -i 's#/usr/bin/pacman-key --populate$#/usr/bin/pacman-key --populate archlinuxarm#' "$P/airootfs/etc/systemd/system/pacman-init.service"
+# 3. The profile pacman.conf above configures the BUILD, not the live system.
+# Ship an explicit ARM config and mirrorlist in airootfs as well.
+install -Dm644 "$P/pacman.conf" "$P/airootfs/etc/pacman.conf"
+install -Dm644 "${ARM_MIRRORLIST:-/etc/pacman.d/mirrorlist}" "$P/airootfs/etc/pacman.d/mirrorlist"
+# Never let upstream's mirror= override switch to the x86 repository URL layout.
+sed -i 's#\\$repo/os/\\$arch#\\$arch/\\$repo#' "$P/airootfs/usr/local/bin/choose-mirror"
+
+# The keyring directory is tmpfs on every live boot. Populate it there, not at
+# image build time, and fail the build if upstream's unit changes underneath us.
+unit="$P/airootfs/etc/systemd/system/pacman-init.service"
+grep -qx 'ExecStart=/usr/bin/pacman-key --populate' "$unit"
+sed -i 's#^ExecStart=/usr/bin/pacman-key --populate$#ExecStart=/usr/bin/pacman-key --populate archlinuxarm#' "$unit"
+grep -qx 'ExecStart=/usr/bin/pacman-key --populate archlinuxarm' "$unit"
+# Gate interactive login on successful keyring initialization (not just ordering).
+for getty in getty@ serial-getty@; do
+  mkdir -p "$P/airootfs/etc/systemd/system/$getty.service.d"
+  cat > "$P/airootfs/etc/systemd/system/$getty.service.d/pacman-init.conf" <<'UNIT'
+[Unit]
+Requires=pacman-init.service
+After=pacman-init.service
+UNIT
+done
 
 # 4. only UEFI (releng's aarch64 mode); drop memtest entry that is x86 only
 sed -i "s/^bootmodes=.*/bootmodes=('uefi.systemd-boot')/; /^           'uefi.systemd-boot')$/d" "$P/profiledef.sh"
@@ -69,6 +90,9 @@ sed -i '/^options / s/$/ loglevel=4/' "$P"/efiboot/loader/entries/*.conf
 cat > "$P/airootfs/root/customize_airootfs.sh" <<'CUSTOM'
 #!/usr/bin/env bash
 set -eux
+test -s /usr/share/pacman/keyrings/archlinuxarm.gpg
+test -s /usr/share/pacman/keyrings/archlinuxarm-trusted
+grep -q "^SigLevel    = Required DatabaseOptional$" /etc/pacman.conf
 kver=$(ls /usr/lib/modules | head -n1)
 cp /boot/Image /boot/vmlinuz-linux
 echo linux > "/usr/lib/modules/$kver/pkgbase"

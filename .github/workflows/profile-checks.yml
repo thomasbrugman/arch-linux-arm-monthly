@@ -1,0 +1,28 @@
+name: Profile regression checks
+on:
+  push:
+    paths:
+      - 'scripts/**'
+      - 'tests/**'
+      - '.github/workflows/profile-checks.yml'
+  pull_request:
+    paths:
+      - 'scripts/**'
+      - 'tests/**'
+      - '.github/workflows/profile-checks.yml'
+permissions:
+  contents: read
+jobs:
+  profile:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check shell syntax and serial driver
+        run: |
+          for script in scripts/*.sh tests/*.sh; do bash -n "$script"; done
+          python3 tests/test-boot-console.py
+      - name: Test adaptations against pinned upstream profile
+        run: |
+          git clone https://github.com/archlinux/archiso.git /tmp/archiso
+          git -C /tmp/archiso checkout 723da192226e1c9d5def9168f13332793c82a85e
+          bash tests/test-profile.sh /tmp/archiso

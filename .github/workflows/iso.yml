@@ -23,7 +23,7 @@ jobs:
       - name: Build ISO (upstream archiso, Arch Linux ARM packages)
         run: ./scripts/build-iso.sh
 
-      - name: Boot test in QEMU (aarch64, UEFI)
+      - name: Boot and signed-package test in QEMU (aarch64, UEFI)
         run: ./scripts/boot-test.sh
 
       - name: Upload build log
@@ -44,6 +44,6 @@ jobs:
           D=$(date -u +%Y.%m.%d); TAG="iso-$D"
           cat > notes.md <<NOTES
           Arch Linux ARM aarch64 live/installer ISO, built $D with upstream archiso (releng profile) from current Arch Linux ARM packages.
-          UEFI only. It booted to the live login prompt in QEMU (aarch64, UEFI firmware) before this release was published. Checksums are in SHA256SUMS.
+          UEFI only. It passed a live login and signed-package reinstall test in QEMU (aarch64, UEFI firmware) before this release was published. Checksums are in SHA256SUMS.
           NOTES
           gh release create "$TAG" out/*.iso out/SHA256SUMS --title "Arch Linux ARM ISO $D" --notes-file notes.md
