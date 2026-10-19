@@ -28,7 +28,7 @@ Boot it with UEFI, then follow the usual Arch install guide or run `archinstall`
 
 In UTM on Apple Silicon the Apple Virtualization backend works out of the box and is the fastest option. The QEMU backend also works, with two caveats seen on real hardware:
 
-- Attach the ISO with a VirtIO (or NVMe) interface, not USB: with the ISO on a USB drive and the hypervisor enabled, the kernel can die right after the systemd-boot menu with `Synchronous Exception at 0x...` (a UTM/QEMU hypervisor issue with USB storage; it does not happen in emulation or with VirtIO-attached media).
+- Attach the ISO as a disk on the VirtIO (or NVMe) interface, not as a USB CD: with the ISO on a removable USB drive and the hypervisor enabled, the kernel can die right after the systemd-boot menu with `Synchronous Exception at 0x...` (a UTM/QEMU hypervisor issue with USB storage; it does not happen in emulation or with VirtIO-attached media). UTM cannot make a removable CD on VirtIO ("Device ... is not removable"), so add it as a disk: VM settings > Drives > New Drive > uncheck "Removable" > Interface: VirtIO > "Import..." and pick the ISO. The ISO is hybrid, so it boots from disk exactly like a dd'ed USB stick.
 - Under pure emulation (hypervisor off) the default `cortex-a72` CPU model works; it is just much slower.
 
 Not affiliated with Arch Linux or Arch Linux ARM.
