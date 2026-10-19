@@ -49,6 +49,15 @@ rm -f "$P"/efiboot/loader/entries/*memtest*
 #     do not exist on aarch64, and the build errors without removing it
 sed -i 's/ memdisk / /' "$P/airootfs/etc/mkinitcpio.conf.d/archiso.conf"
 
+
+# 4c. squashfs xz BCJ filters: releng offers x86 and arm64, and mksquashfs picks per block.
+#     The Arch Linux ARM kernel has no x86 BCJ decoder (CONFIG_XZ_DEC_X86 is not set), so any
+#     block stored with the x86 filter fails in the live system with
+#     "SQUASHFS error: xz decompression failed". Restrict the filters to what the
+#     Arch Linux ARM kernel decodes (arm, armthumb, arm64).
+sed -i "s/'-Xbcj' 'x86,arm64'/'-Xbcj' 'arm,armthumb,arm64'/" "$P/profiledef.sh"
+grep -q "'-Xbcj' 'arm,armthumb,arm64'" "$P/profiledef.sh"
+
 # 5. Arch Linux ARM's kernel package ships /boot/Image and the preset linux-aarch64 instead of
 #    /boot/vmlinuz-linux and a pkgbase file; give mkarchiso the names it expects.
 cat > "$P/airootfs/root/customize_airootfs.sh" <<'CUSTOM'

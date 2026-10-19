@@ -20,6 +20,7 @@ Changed, in `scripts/adapt-profile.sh` (the build log prints the result):
 - Packages: releng's aarch64 list minus anything Arch Linux ARM does not carry (the build log lists them), with `linux-aarch64` as the kernel.
 - Kernel glue: Arch Linux ARM's kernel package ships `/boot/Image` rather than the layout Arch's kernels use, so a small `customize_airootfs.sh` renames it to `vmlinuz-linux` and builds the initramfs.
 - Boot modes: UEFI only, the x86-only memtest entry is removed, and the `memdisk` initramfs hook (syslinux BIOS only) is dropped.
+- Squashfs BCJ filters: releng lets mksquashfs pick between the x86 and arm64 xz filters per block, but the Arch Linux ARM kernel cannot decode the x86 filter (`CONFIG_XZ_DEC_X86` is not set), which showed up as `SQUASHFS error: xz decompression failed` on some files. The image is built with ARM filters only, and the boot test fails if any SQUASHFS error appears in the serial log.
 
 ## Using the ISO
 
