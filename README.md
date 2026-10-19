@@ -24,6 +24,11 @@ Changed, in `scripts/adapt-profile.sh` (the build log prints the result):
 
 ## Using the ISO
 
-Boot it with UEFI. In UTM use the QEMU backend with UEFI, not Apple Virtualization. Then follow the usual Arch install guide or run `archinstall`.
+Boot it with UEFI, then follow the usual Arch install guide or run `archinstall`.
+
+In UTM on Apple Silicon the Apple Virtualization backend works out of the box and is the fastest option. The QEMU backend also works, with two caveats seen on real hardware:
+
+- Attach the ISO with a VirtIO (or NVMe) interface, not USB: with the ISO on a USB drive and the hypervisor enabled, the kernel can die right after the systemd-boot menu with `Synchronous Exception at 0x...` (a UTM/QEMU hypervisor issue with USB storage; it does not happen in emulation or with VirtIO-attached media).
+- Under pure emulation (hypervisor off) the default `cortex-a72` CPU model works; it is just much slower.
 
 Not affiliated with Arch Linux or Arch Linux ARM.
