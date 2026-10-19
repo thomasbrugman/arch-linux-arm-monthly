@@ -58,6 +58,12 @@ sed -i 's/ memdisk / /' "$P/airootfs/etc/mkinitcpio.conf.d/archiso.conf"
 sed -i "s/'-Xbcj' 'x86,arm64'/'-Xbcj' 'arm,armthumb,arm64'/" "$P/profiledef.sh"
 grep -q "'-Xbcj' 'arm,armthumb,arm64'" "$P/profiledef.sh"
 
+
+# 6. console log level: Arch Linux ARM's kernel defaults to printing info-level messages on the
+#    console, which keeps spamming the live TTY after boot (the x86_64 ISO is quiet there).
+#    Cap console printk at warning level, like a normal install; boot output is unchanged.
+sed -i '/^options / s/$/ loglevel=4/' "$P"/efiboot/loader/entries/*.conf
+
 # 5. Arch Linux ARM's kernel package ships /boot/Image and the preset linux-aarch64 instead of
 #    /boot/vmlinuz-linux and a pkgbase file; give mkarchiso the names it expects.
 cat > "$P/airootfs/root/customize_airootfs.sh" <<'CUSTOM'
